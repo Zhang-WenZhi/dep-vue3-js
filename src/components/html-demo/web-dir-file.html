@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>选择文件夹</title>
+</head>
+<body>
+    <button>选择文件夹</button>
+    <script>
+        const btn = document.querySelector('button');
+        // btn.addEventListener('click', () => {
+        //     const input = document.createElement('input');
+        //     input.type = 'file';
+        //     input.webkitdirectory = true;
+        //     input.click();
+        //     input.addEventListener('change', () => {
+        //         const files = input.files;
+        //     })
+        // })
+
+        btn.onclick = async function() {
+            try {
+                const handle = await showDirectoryPicker();
+                console.log(handle);
+                const root = await processHandle(handle);
+                console.log("root: ", root);
+
+                const fileHandle = root.children[4];
+                console.log("fileHandle: ", fileHandle);
+
+                const file = await fileHandle.getFile();
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    console.log(event.target.result); // 中文乱码 // highlight.js 高亮显示 // FileSystem API
+                }
+                reader.readAsText(file, 'utf-8');
+            } catch (error) {
+                console.log(error);
+                // 用户拒绝的处理
+            }
+        }
+
+        async function processHandle(handle) {
+            if (handle.kind === 'file') {
+                // console.log('这是一个文件');
+                return handle;
+            }
+            handle.children = [];
+            // 异步迭代器
+            const iter = handle.entries();
+            for await (const item of iter) {
+                // console.log("item: ", item);
+                handle.children.push(await processHandle(item[1]));
+            }
+            return handle;
+        }
+    </script>
+</body>
+</html>
