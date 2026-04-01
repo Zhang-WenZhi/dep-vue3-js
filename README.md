@@ -47,3 +47,15 @@ git push -u origin main
 git remote add origin https://github.com/Zhang-WenZhi/dep-vue3-js.git
 git branch -M main
 git push -u origin main
+
+## VS Code 生成插件列表文件 extensions.txt
+
+```bash
+# 生成插件列表文件 extensions.txt
+code --list-extensions > extensions.txt
+# 新电脑上批量安装插件
+# 一键安装
+code --list-extensions | foreach { code --install-extension $_ }
+# 逐行安装
+cat extensions.txt | xargs -L 1 code --install-extension
+```
