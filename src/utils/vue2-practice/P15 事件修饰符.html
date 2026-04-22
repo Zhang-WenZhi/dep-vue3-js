@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>Vue 事件修饰符</title>
+  <script src="./js/vue.js"></script>
+  <style>
+    .box1{
+      height: 200px;
+      background: skyblue;
+    }
+  </style>
+</head>
+<body>
+    <!--
+    Vue中的事件修饰符：
+    1.prevent：阻止默认事件（常用）；
+    2.stop：阻止事件冒泡（常用）；
+    3.once：事件只触发一次（常用）；
+    4.capture：使用事件的捕获模式；
+    5.self：只有event.target是当前操作的元素时才触发事件；
+    6.passive：事件的默认行为立即执行，无需等待事件回调执行完毕；
+    -->
+  <div id="root">
+    <h2>欢迎来到Vue学习</h2>
+
+    <!-- 1. prevent 阻止默认行为 -->
+    <a href="https://www.baidu.com" @click.prevent="showInfo">点我提示信息</a>
+
+    <!-- 2. stop 阻止事件冒泡 -->
+    <div class="box1" @click="showInfo">
+      <button @click.stop="showInfo">点我提示信息</button>
+    </div>
+
+    <!-- 3. once 事件只触发一次 -->
+    <button @click.once="showInfo">点我提示信息(只触发一次)</button>
+
+    <!-- 4. capture 使用事件捕获模式 -->
+    <div class="box1" @click.capture="showMsg(1)">
+      div1
+      <div @click="showMsg(2)">div2</div>
+    </div>
+
+    <!-- 5. self 只有点击event.target是当前元素自身时才触发 -->
+    <div class="box1" @click.self="showInfo">
+      <button @click="showInfo">点我</button>
+    </div>
+
+    <!-- 6. passive 事件默认行为立即执行，无需等待回调执行完毕 -->
+    <!-- 滚动时默认行为优先执行 -->
+    <!-- <div @wheel.passive="onWheel">...</div> -->
+
+  </div>
+
+  <script>
+    new Vue({
+      el: '#root',
+      data: {
+        
+      },
+      methods: {
+        showInfo(e){
+          alert('你好呀！')
+          // console.log(e.target)
+        },
+        showMsg(msg){
+          alert(msg)
+        }
+      }
+    })
+  </script>
+</body>
+</html>
