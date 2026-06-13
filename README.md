@@ -59,3 +59,5 @@ code --list-extensions | foreach { code --install-extension $_ }
 # 逐行安装
 cat extensions.txt | xargs -L 1 code --install-extension
 ```
+
+## @types/node": "^20.14.2",
