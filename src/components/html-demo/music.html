@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>五线+六线双谱 - abcjs官方标准写法</title>
+    <!-- 锁定稳定版本，拒绝latest浮动版 -->
+    <script src="https://cdn.jsdelivr.net/npm/abcjs@6.3.0/dist/abcjs-basic.min.js"></script>
+    <style>
+        .music-container { margin: 20px; padding: 15px; border: 1px solid #ddd; }
+        .play-btn { background: #4CAF50; color: white; padding: 10px; border: none; cursor: pointer; margin-top:12px; }
+    </style>
+</head>
+<body>
+    <div class="music-container">
+        <div id="score"></div>
+        <button class="play-btn" onclick="playMusic()">播放音乐</button>
+    </div>
+
+    <script>
+        const myMusic = `
+X: 1
+T: Cooley's
+M: 4/4
+L: 1/8
+K: Emin
+|:D2|"Em"EBBA B2 EB|\
+    ~B2 AB dBAG|\
+    "D"FDAD BDAD|\
+    FDAD dAFD|
+"Em"EBBA B2 EB|\
+    B2 AB defg|\
+    "D"afe^c dBAF|\
+    "Em"DEFD E2:|
+|:gf|"Em"eB B2 efge|\
+    eB B2 gedB|\
+    "D"A2 FA DAFA|\
+    A2 FA defg|
+"Em"eB B2 eBgB|\
+    eB B2 defg|\
+    "D"afe^c dBAF|\
+    "Em"DEFD E2:|
+        `;
+
+        const myMusic2 = `
+X: 24
+T: Clouds Thicken
+C: Paul Rosen
+S: Copyright 2005, Paul Rosen
+M: 6/8
+L: 1/8
+Q: 3/8=116
+R: Creepy Jig
+K: Em
+|:"Em"EEE E2G|"C7"_B2A G2F|"Em"EEE E2G|\
+"C7"_B2A "B7"=B3|"Em"EEE E2G|
+"C7"_B2A G2F|"Em"GFE "D (Bm7)"F2D|\
+1"Em"E3-E3:|2"Em"E3-E2B|:"Em"e2e gfe|
+"G"g2ab3|"Em"gfeg2e|"D"fedB2A|"Em"e2e gfe|\
+"G"g2ab3|"Em"gfe"D"f2d|"Em"e3-e3:|
+`;
+
+
+        // ====== 官方文档标准TAB配置（100%正确格式）======
+        const renderOpts = {
+            responsive: "resize",
+            scale: 1.2,
+            staffwidth: 950,
+            // tablature 是数组，内部对象按官方规范填写
+            tablature: [
+                {
+                    instrument: "guitar",
+                    // 标准吉他6弦→1弦：低音E、低音A、D、G、B、高音e（官方标准写法）
+                    tuning: ["E,", "A,", "D", "G", "B", "e"],
+                    capo: 0,
+                    label: "Guitar TAB"
+                }
+            ]
+        };
+
+        // 只执行一次全局渲染
+        const visualScore = ABCJS.renderAbc("score", myMusic, renderOpts);
+
+        // 播放函数只读取已经渲染好的乐谱对象，不要再二次renderAbc
+        function playMusic() {
+            const visualObj = visualScore[0];
+            const synth = new ABCJS.synth.CreateSynth();
+            synth.init({ visualObj: visualObj })
+                .then(() => synth.prime())
+                .then(() => {
+                    synth.start();
+                    console.log("播放启动成功");
+                });
+        }
+    </script>
+</body>
+</html>

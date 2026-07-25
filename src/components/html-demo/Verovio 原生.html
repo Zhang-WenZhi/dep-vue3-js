@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>Verovio 乐谱播放+高亮【最终修复版】</title>
+<!-- Verovio -->
+<script src="https://cdn.jsdelivr.net/npm/verovio@3.16.0/dist/verovio-toolkit-wasm.js"></script>
+<!-- Tone.js 官方稳定版（长期维护） -->
+<script src="https://cdn.jsdelivr.net/npm/tone@15.1.22/build/Tone.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{padding:20px}
+.ctrl{margin-bottom:12px;display:flex;gap:12px;align-items:center}
+button{padding:8px 18px;border:none;border-radius:4px;cursor:pointer}
+#play{background:#27ae60;color:#fff}
+#stop{background:#e74c3c;color:#fff}
+#state{color:#555}
+#scoreBox{border:1px solid #ddd;padding:10px;overflow-x:auto;margin-top:10px}
+.note-active{fill:#f00 !important;stroke:#f00 !important}
+</style>
+</head>
+<body>
+<div class="ctrl">
+  <button id="play">播放乐谱</button>
+  <button id="stop">停止</button>
+  <span id="state">初始化中...</span>
+</div>
+<div id="scoreBox"></div>
+
+<script>
+let toolkit = null;
+let svgDom = null;
+let noteDataList = [];
+let piano = null;
+let reqAnim = null;
+const BPM = 72;
+const beatTime = 60 / BPM;
+let playLock = false;
+let scoreLoadDone = false;
+
+// Verovio 加载乐谱
+verovio.module.onRuntimeInitialized = async () => {
+  try{
+    toolkit = new verovio.toolkit();
+    const opt = {
+      scale:40,
+      pageWidth:2800,
+      pageHeight:3500,
+      adjustPageHeight:true,
+      font:"Bravura"
+    };
+    toolkit.setOptions(opt);
+    const res = await fetch("https://www.verovio.org/examples/musicxml/Bach_Nun_komm_der_Heiden_Heiland_BWV.659.xml");
+    const xmlStr = await res.text();
+    toolkit.loadData(xmlStr);
+    const svgStr = toolkit.renderToSVG(1);
+    document.getElementById("scoreBox").innerHTML = svgStr;
+    svgDom = document.querySelector("#scoreBox svg");
+
+    parseNoteFromMEI();
+    scoreLoadDone = true;
+    document.getElementById("state").innerText = "✅ 乐谱加载完成，可播放";
+  }catch(err){
+    document.getElementById("state").innerText = "❌ 乐谱加载失败";
+    console.error(err);
+  }
+};
+
+// 解析MEI原生时间轴
+function parseNoteFromMEI(){
+  noteDataList = [];
+  const meiTxt = toolkit.getMEI();
+  const meiXml = new DOMParser().parseFromString(meiTxt,"text/xml");
+  const allMeiNote = meiXml.querySelectorAll("note");
+  const svgNotePaths = Array.from(svgDom.querySelectorAll('path[data-id^="note-"]'));
+
+  allMeiNote.forEach(meiNote=>{
+    const xmlId = meiNote.getAttribute("xml:id");
+    const svgEl = svgNotePaths.find(p=>p.dataset.id === `note-${xmlId}`);
+    if(!svgEl) return;
+
+    const pitch = meiNote.querySelector("pitch");
+    if(!pitch) return;
+    const step = pitch.querySelector("step").textContent;
+    const oct = pitch.querySelector("octave").textContent;
+    const alter = Number(pitch.querySelector("alter")?.textContent || 0);
+    let noteName = step + oct;
+    if(alter>0) noteName = step + "#" + oct;
+    if(alter<0) noteName = step + "b" + oct;
+
+    const beats = Number(meiNote.getAttribute("beats"));
+    const beatType = Number(meiNote.getAttribute("beat-type"));
+    const durSec = (beats / beatType) * beatTime;
+    const whenAttr = meiNote.getAttribute("when");
+    const startTimeSec = Number(whenAttr) / 4 * beatTime;
+
+    noteDataList.push({
+      el: svgEl,
+      name: noteName,
+      duration: durSec,
+      start: startTimeSec
+    })
+  })
+}
+
+// 【修复】正确写法：Sampler 实例化 + await 内部加载Promise
+async function initPiano(){
+  if(piano) return piano;
+  piano = new Tone.Sampler({
+    urls: {
+      "C4": "C4.mp3",
+      "D#4": "Ds4.mp3",
+      "F#4": "Fs4.mp3",
+      "A4": "A4.mp3"
+    },
+    release: 2.2,
+    baseUrl: "https://tonejs.github.io/audio/salamander/"
+  }).toDestination();
+  // 正确等待采样加载完成
+  await Tone.loaded();
+  piano.volume.value = -7;
+  return piano;
+}
+
+// 播放按钮
+document.getElementById("play").addEventListener("click",async()=>{
+  if(playLock) return;
+  if(!scoreLoadDone){
+    alert("等待状态文字显示【乐谱加载完成】再点击");
+    return;
+  }
+  await Tone.start();
+  await initPiano();
+  playLock = true;
+  document.getElementById("state").innerText = "▶ 播放中";
+  noteDataList.forEach(item=>item.el.classList.remove("note-active"));
+
+  const playZero = Tone.now();
+  noteDataList.forEach(n=>{
+    piano.triggerAttackRelease(n.name, n.duration * 0.85, playZero + n.start, 0.65);
+  })
+
+  function renderHighlight(){
+    if(!playLock) return;
+    const now = Tone.now() - playZero;
+    noteDataList.forEach(n=>{
+      n.el.classList.toggle("note-active", now >= n.start && now < n.start + n.duration);
+    })
+    const maxTime = Math.max(...noteDataList.map(d=>d.start + d.duration));
+    if(now < maxTime){
+      reqAnim = requestAnimationFrame(renderHighlight);
+    }else{
+      stopFunc();
+    }
+  }
+  renderHighlight();
+})
+
+// 停止方法
+function stopFunc(){
+  playLock = false;
+  cancelAnimationFrame(reqAnim);
+  noteDataList.forEach(item=>item.el.classList.remove("note-active"));
+  document.getElementById("state").innerText = "⏹ 已停止";
+  if(piano) piano.releaseAll();
+}
+document.getElementById("stop").addEventListener("click", stopFunc);
+</script>
+</body>
+</html>

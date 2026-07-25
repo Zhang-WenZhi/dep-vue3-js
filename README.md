@@ -61,3 +61,11 @@ cat extensions.txt | xargs -L 1 code --install-extension
 ```
 
 ## @types/node": "^20.14.2",
+
+## abcjs字符串音乐，内置播放器 + verovio原生，xml音乐，需第三方播放器
+
+https://github.com/paulrosen/abcjs
+https://www.abcjs.net/
+
+https://www.verovio.org/
+https://github.com/rism-digital/verovio
